@@ -1,13 +1,17 @@
 import express from "express";
 import * as dotenv from "dotenv";
 import cors from "cors";
-import * as OpenAI from "openai";
+import OpenAI from "openai";
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 app.get("/", async (req, res) => {
   res.status(200).send({
@@ -19,10 +23,10 @@ app.post("/", async (req, res) => {
   try {
     const prompt = req.body.prompt;
 
-    const response = await OpenAI.createCompletion({
-      engine: "text-davinci-003",
-      prompt: `${prompt}`,
-      temperature: 0,
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: `${prompt}` }],
+      temperature: 1,
       max_tokens: 3000,
       top_p: 1,
       frequency_penalty: 0.5,
@@ -33,8 +37,14 @@ app.post("/", async (req, res) => {
       bot: response.choices[0].text,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).send({ error });
+    if (error instanceof OpenAI.APIError) {
+      console.error(error.status);
+      console.error(error.message);
+      console.error(error.code);
+      console.error(error.type);
+    } else {
+      console.log(error);
+    }
   }
 });
 
